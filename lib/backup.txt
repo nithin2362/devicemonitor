@@ -1,0 +1,320 @@
+FutureBuilder(
+    future: getVal(dBr),
+      builder: (context, snapshot) {
+      //if(snapshot.connectionState == ConnectionState.done)
+      //{
+      return Scaffold(
+      appBar: AppBar(
+        title: Center(child: Text("LED Control")),
+      ),
+      body: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            child: IconButton(icon: Icon(Icons.lightbulb),
+            color: bulbcolor,
+            onPressed: (){
+              isOn = !isOn;
+            dBr.child("Light").set({"Switch":isOn});
+              setState(() {
+                bulbcolor = isOn ? Colors.yellow : Colors.white;
+                bulbtext = isOn ? "On" : "Off";
+              });
+            },
+            iconSize: 70.0,
+            ),
+            padding: EdgeInsets.only(left: 140),
+          ),
+          Container(
+            child: Text(
+              "LED State: $bulbtext",
+              style: TextStyle(color: Colors.white,fontSize: 20.0),
+
+            ),
+            padding: EdgeInsets.only(left: 150)
+          ),
+          ],
+      ),
+    );;//}
+      
+      // else
+      // {return WaitScreen();}
+
+        
+      });
+
+      import 'dart:ffi';
+import 'package:flutter/material.dart';
+import 'package:firebase_database/firebase_database.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
+import 'wait.dart';
+import 'package:intl/intl.dart';
+import 'dart:async';
+void main() {
+  runApp(MaterialApp(
+    home: FBLoad(),
+    // theme: ThemeData.dark(),
+    debugShowCheckedModeBanner: false,
+  ));
+}
+Map map1 = {};
+class FBLoad extends StatelessWidget {
+  const FBLoad({ Key? key }) : super(key: key);
+  
+  @override
+   Widget build(BuildContext context) {
+    return FutureBuilder(
+      // Initialize FlutterFire
+      future: Firebase.initializeApp(),
+      builder: (context, snapshot) {
+        // Check for errors
+        if (snapshot.hasError) 
+        {
+          return Container(
+            child: Text(
+              "Found some error"
+            ),
+          );
+        }
+
+        // Once complete, show your application
+        if (snapshot.connectionState == ConnectionState.done) {
+          Map mm1 = {"db_path":"Light","smart_mode":true,"icon":Icon(Icons.lightbulb,size: 75.0,)};
+          return Device(mm1);
+        }
+
+        // Otherwise, show something whilst waiting for initialization to complete
+        return WaitScreen();
+      },
+    );
+  }
+}
+class Device extends StatefulWidget {
+  // Map map1 = {};
+  Device(Map m1)
+  {
+    map1 = m1;
+  }
+  @override
+  State<Device> createState() => _DeviceState();
+}
+
+class _DeviceState extends State<Device> {
+  @override
+  // Map map1 = {};
+  Device(Map m1)
+  {
+    map1 = m1;
+  }
+  Color bulbcolor = Colors.white;
+  bool isOn = false;//,pflag = false;
+  int num = 0;//,t = 15;
+  String bulbtext = "Off",state = "",dtext = "Unavailable",diff = "";
+  DateTime d1 = DateTime.now(),d2 = DateTime.now();
+  final dBr = FirebaseDatabase.instance.ref();
+  @override
+  void initState() {
+    super.initState();
+    //  t = pflag ? 30 : 15;
+    //  pflag = !pflag;
+     Timer.periodic(Duration(seconds: 60), (timer) {
+      getTime(dBr);
+      setState(() {});
+    });
+  }
+  Future<void> getTime(var ref) async
+  {
+    
+    final snap1 = await ref.child("${map1["db_path"]}/Last Toggled").get();
+    if(snap1.exists)
+    {
+      d1 = DateTime.parse(snap1.value);
+      d2 = DateTime.parse(DateTime.now().toString());
+      var v1 = d2.difference(d1).inMinutes;
+      diff = v1 <= 60 ? d2.difference(d1).inMinutes.toString() + " minute(s) ago" : d2.difference(d1).inHours.toString() + " hour(s) ago";
+    }
+    else
+      {
+        dtext = "Unavailable";
+        diff = "Last Toggle data unavailable";
+      }
+  }
+  Future<void> getVal(var ref) async
+  {
+    //state = dBr.child("Light").onValue.toString();
+    final snapshot = await ref.child("${map1["db_path"]}/Switch").get();
+    // final snap1 = await ref.child("Light/Last Toggled").get();
+    if (snapshot.exists) {
+      isOn = snapshot.value;
+      bulbcolor = isOn ? Colors.yellow : Colors.white;
+      bulbtext = isOn ? "On" : "Off";
+
+    }
+    else {
+        bulbcolor = Colors.white;
+        bulbtext = "Unavailable";
+    } 
+    await getTime(dBr);
+    // if(snap1.exists)
+    // {
+    //   d1 = DateTime.parse(snap1.value);
+    //   d2 = DateTime.parse(DateTime.now().toString());
+    //   diff = d2.difference(d1).inMinutes.toString();
+    // }
+    // else
+    //   {
+    //     dtext = "Unavailable";
+    //     diff = "_";
+    //   }
+    
+  }
+  
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Center(child: Text("LED Control")),
+      backgroundColor: Color(0xFF163057),
+      ),
+      backgroundColor:Color(0xFF002647),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            FutureBuilder(
+              future: getVal(dBr),
+              builder: (context, snapshot) {
+                if(snapshot.connectionState == ConnectionState.done)
+                {
+                  return Column(
+                    children: [
+                  IconButton(icon: map1["icon"],
+                  color: bulbcolor,
+                  onPressed: (){
+                    isOn = !isOn;
+                    d2 = DateTime.parse(DateTime.now().toString());
+                    diff = d2.difference(d1).inMinutes.toString();
+                    dBr.child("${map1["db_path"]}").set({"Switch":isOn,"Last Toggled":d2.toString()});
+                    Future.delayed(const Duration(milliseconds: 2000), () {
+                        setState(() {
+                          bulbcolor = isOn ? Colors.yellow : Colors.white;
+                          bulbtext = isOn ? "On" : "Off";
+                          });
+
+                        });
+                    
+                    
+                    // setState(() {
+                    //   bulbcolor = isOn ? Colors.yellow : Colors.white;
+                    //   bulbtext = isOn ? "On" : "Off";
+                      
+                    // });
+                  },
+                  iconSize: 70.0,
+                  ),
+                  Center(
+                    child: Text(
+                      "$bulbtext",
+                      style: TextStyle(color: Colors.white,fontSize: 40.0,fontWeight: FontWeight.bold),
+
+                    ),
+                  ),
+                  Center(
+                    child: Text(
+                      "\n$diff",
+                      style: TextStyle(color: Colors.white,fontSize: 20.0),
+
+                    ),
+                  ),
+                  // Center(
+                  //   child: Text(
+                  //     "\tTime: ${dtext.substring(0,11)}",
+                  //     style: TextStyle(color: Colors.white,fontSize: 20.0),
+
+                  //   ),
+                  // ),
+                  // Center(
+                  //   child: Text(
+                  //     "\tDate: ${dtext.substring(12)}",
+                  //     style: TextStyle(color: Colors.white,fontSize: 20.0),
+
+                  //   ),
+                  // )
+                  ]);
+                }
+                else
+                { num++;
+                  //return num == 1 ?
+              return Center(
+                          child: SpinKitCubeGrid(
+                                color: Colors.white,
+                                size: 70.0,
+                                
+                              ),
+                  ); // : Center(child:Container()); 
+                }
+              }
+            ),
+            
+            
+          ]
+        
+    ),
+      ));
+}
+}
+
+
+
+/// Addappl.dart code 
+import 'package:flutter/material.dart';
+import 'package:trial123/load.dart';
+import 'main.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
+
+class DataAdd extends StatefulWidget {
+  var dBr;
+  DataAdd(this.dBr);
+
+  @override
+  State<DataAdd> createState() => _DataAddState();
+}
+
+class _DataAddState extends State<DataAdd> {
+  @override
+
+  Widget build(BuildContext context) {
+    return FutureBuilder(
+      // Initialize FlutterFire
+      future: getDevices(widget.dBr),
+      builder: (context, snapshot) {
+        // Check for errors
+        if (snapshot.hasError) 
+        {
+          return Container(
+            child: Text(
+              "Found some error"
+            ),
+          );
+        }
+
+        // Once complete, show your application
+        if (snapshot.connectionState == ConnectionState.done) {
+          return HomeScreen();
+          //return Device(mm1);
+        }
+
+        // Otherwise, show something whilst waiting for initialization to complete
+        return Scaffold(
+        backgroundColor:Color(0xFF002647),
+        body: Center(
+        child: SpinKitCubeGrid(
+              color: Colors.white,
+              size: 70.0,
+        ),
+        ),
+      );
+      },
+    );
+  }
+}
