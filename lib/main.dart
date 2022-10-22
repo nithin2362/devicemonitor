@@ -13,11 +13,11 @@ import 'addappl.dart';
 //import 'appliance.dart';
 void main() {
   runApp(
-  RootRestorationScope(restorationId: "root", child: MaterialApp(
+  MaterialApp(
   home: FBLoad(),
     // theme: ThemeData.dark(),
     debugShowCheckedModeBanner: false,
-  )));
+  ));
     
 }
 class FBLoad extends StatelessWidget {
@@ -51,7 +51,8 @@ class FBLoad extends StatelessWidget {
     );
   }
 }
-int id = 0;
+int id = 0,devicelimit = 5;
+bool isButtonDisabled = false;
 Future<void> getDevices(var dBr) async
   {
     final snapshot = await dBr.get();
@@ -62,6 +63,10 @@ Future<void> getDevices(var dBr) async
       var v = devs.values.toList();
       print(k);
       print(v);
+      if(k.length > devicelimit)
+        isButtonDisabled = true;
+      else
+        isButtonDisabled = false;
       for(int i = 0;i<k.length;++i)
       {
         if(deviceNames.indexWhere((element) =>element == k[i]) < 0)
@@ -110,19 +115,19 @@ class _HomeScreenState extends State<HomeScreen>{
       if(snapshot.connectionState == ConnectionState.done)
       {
         return Scaffold(
-            appBar: AppBar(title: Center(child: Text("Living Room",style: TextStyle(color: Colors.white,fontSize: 20.0,fontWeight: FontWeight.bold),)),backgroundColor: Color(0xFF163057),
+            appBar: AppBar(title: Center(child: Text("      Living Room",style: TextStyle(color: Colors.white,fontSize: 20.0,fontWeight: FontWeight.bold),)),backgroundColor: Color(0xFF163057),
             actions: [
               IconButton(onPressed: (){
-                    
+                    isButtonDisabled == false ? 
                     Navigator.push(context,
-                    MaterialPageRoute(builder: (context) => DeviceAdd()));
+                    MaterialPageRoute(builder: (context) => DeviceAdd())) : null;
                     
                     // setState(() {
                     //   if(deviceNames.length < 3)
                     //     dBr.child("Fan").set({"Bulb":false,"Last Toggled":DateTime.parse(DateTime.now().toString()).toString(),"Switch":false});
                     // });
               
-            }, icon: Icon(Icons.add,color: Colors.white,size: 40),),
+            }, icon: Icon(Icons.add,color: isButtonDisabled ? Colors.grey : Colors.white,size: 40),),
             ],
             ),
             backgroundColor:Color.fromARGB(255, 14, 39, 62),
@@ -134,26 +139,48 @@ class _HomeScreenState extends State<HomeScreen>{
                 itemBuilder: (context, index) {
                   final item = devices[index];
 
-                  return Container(
-                    color: Color.fromARGB(255, 81, 113, 161),
-                    height: 60,
-                    child: ListTile(
-                      title: Padding(padding:EdgeInsets.only(left: 80),child: Text("${item.dname}",style: TextStyle(color: Colors.white,fontSize: 20.0),)),
-                      leading: Icon(item.iconData,color: Colors.white,size: 40),
-                      iconColor: bulbcolor,
-                      trailing: IconButton(icon: Icon(Icons.delete),iconSize: 40,color:Colors.red,onPressed: (){
-                        setState(() {
-                          dBr.child(item.dname).remove();
-                          devices.remove(item);
-                          deviceNames.remove(item.dname);
-                        });
-                      },),
-                      onTap: ()
-                      {
-                      Navigator.push(context,
-                      MaterialPageRoute(builder: (context) => item));
-                      }
-                      
+                  return Padding(
+                    padding: const EdgeInsets.all(10.0),
+                    child: Container(
+                      decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(10),
+                      color: Color.fromARGB(255, 81, 113, 161),                      
+                      ),
+                    
+                      height: 60,
+                      child: ListTile(
+                        title: Padding(padding:EdgeInsets.only(left: 80),child: Text("${item.dname}",style: TextStyle(color: Colors.white,fontSize: 20.0),)),
+                        leading: Icon(item.iconData,color: Colors.white,size: 40),
+                        iconColor: bulbcolor,
+                        trailing: IconButton(icon: Icon(Icons.delete),iconSize: 40,color:Colors.red,onPressed: (){
+                          
+                          showDialog(
+                            context: context, 
+                            builder: (context) => AlertDialog(
+                              backgroundColor: Color.fromARGB(255, 33, 72, 131), 
+                              title: Text("Delete ${item.dname} ?", style: TextStyle(color: Colors.white,fontSize: 25,fontWeight: FontWeight.bold),),
+                              content: Text("Are you sure you want to delete the device ?",style: TextStyle(color: Colors.white,fontSize: 15),),
+                              actions: [
+                                ElevatedButton(onPressed: () => Navigator.pop(context), child: Text("Cancel",style: TextStyle(color: Colors.white,fontSize: 15),)),
+                                TextButton(onPressed: (){
+                                  setState(() {
+                                  dBr.child(item.dname).remove();
+                                  devices.remove(item);
+                                  deviceNames.remove(item.dname);
+                                  Navigator.pop(context);
+                          });
+                                }, child: Text("Delete",style: TextStyle(color: Colors.blue,fontSize: 15),)),
+                              ],
+                            ));
+                          
+                        },),
+                        onTap: ()
+                        {
+                        Navigator.push(context,
+                        MaterialPageRoute(builder: (context) => item));
+                        }
+                        
+                      ),
                     ),
                   );
                 },
@@ -161,16 +188,7 @@ class _HomeScreenState extends State<HomeScreen>{
           );
       }
     else
-      return Scaffold(
-        backgroundColor:Color(0xFF002647),
-        body: Center(
-        child: SpinKitCubeGrid(
-              color: Colors.white,
-              size: 70.0,
-              
-            ),
-        ),
-      );
+      return WaitScreen();
     }
      );
     

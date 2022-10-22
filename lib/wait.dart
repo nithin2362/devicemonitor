@@ -6,9 +6,9 @@ class WaitScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Color(0xFF163057),
-    ),
+    //   appBar: AppBar(
+    //     backgroundColor: Color(0xFF163057),
+    // ),
     backgroundColor: Color(0xFF002647),
     body: Center(
       child: SpinKitCubeGrid(
